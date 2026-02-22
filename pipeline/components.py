@@ -16,6 +16,7 @@ __all__ = [
     'Node',
     'Worker', 
     'Source',
+    'KeyedBatch',
     'Batch',
     'Unbatch',
     'Buffer',
@@ -839,4 +840,57 @@ class Broadcast(ThreadingNode):
 
                 self.output.put(item)
         except ShutDown:
+            return
+
+
+class KeyedBatch(ThreadingNode):
+    """Batch items by key_fn. Flushes when key changes or batch_size reached.
+
+    Items with the same key are accumulated into a list up to batch_size.
+    When an item with a different key arrives, the current batch is flushed
+    and a new batch starts with that item. EndOfInput flushes remaining items.
+    """
+
+    def __init__(self, batch_size: int, key_fn: Callable):
+        super().__init__()
+        self.batch_size = batch_size
+        self.key_fn = key_fn
+        self.thread_functions = [self.loop]
+
+    def loop(self):
+        batch = []
+        try:
+            current_key = None
+
+            while True:
+                item = self.input.get()
+
+                if isinstance(item, EndOfInput):
+                    if batch:
+                        self.output.put(batch)
+                    self.output.put(EndOfInput())
+                    batch = []
+                    current_key = None
+                    continue
+
+                item_key = self.key_fn(item)
+
+                if batch and item_key != current_key:
+                    self.output.put(batch)
+                    batch = []
+
+                current_key = item_key
+                batch.append(item)
+
+                if len(batch) >= self.batch_size:
+                    self.output.put(batch)
+                    batch = []
+                    current_key = None
+
+        except ShutDown:
+            if batch:
+                try:
+                    self.output.put(batch)
+                except ShutDown:
+                    pass
             return
