@@ -334,7 +334,7 @@ class Worker(ThreadingNode):
         if self.work_fn is None:
             return f"Worker(class={self.__class__.__name__})"
         else:
-            return f"Worker(fn={self.work_fn.__name__})"
+            return f"Worker(fn={getattr(self.work_fn, '__name__', None) or getattr(self.work_fn.func, '__name__', repr(self.work_fn))})"
 
 
 class Source(ThreadingNode):
