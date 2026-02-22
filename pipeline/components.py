@@ -682,6 +682,7 @@ class Switch(ThreadingNode):
                 raise ValueError(f"Invalid node type: {type(node)}")
             self.nodes[key] = node
         self.fifo_order = Queue()
+        self.thread_functions = [self._in_thread_fn, self._out_thread_fn]
 
     def _in_thread_fn(self):
         try:
@@ -713,6 +714,10 @@ class Switch(ThreadingNode):
         except ShutDown:
             return
 
+    def shutdown(self):
+        super().shutdown()
+        self.fifo_order.shutdown()
+
 
 class Router(ThreadingNode):
     nodes: Dict[str, Node]
@@ -734,6 +739,7 @@ class Router(ThreadingNode):
                 raise ValueError(f"Invalid node type: {type(node)}")
             self.nodes[key] = node
         self.fifo_order = Queue()
+        self.thread_functions = [self._in_thread_fn, self._out_thread_fn]
 
     def _in_thread_fn(self):
         try:
@@ -804,6 +810,7 @@ class Broadcast(ThreadingNode):
                 else:
                     raise ValueError(f"Invalid node type: {type(node)}")
                 self.nodes[key] = node
+        self.thread_functions = [self._in_thread_fn, self._out_thread_fn]
 
     def _in_thread_fn(self):
         try:
