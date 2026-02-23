@@ -199,7 +199,7 @@ class Node:
             for key, node in self.nodes.items() if isinstance(self.nodes, dict) else enumerate(self.nodes):
                 yield from node.iterate_tree(parents + ((self, key),))
 
-    def profile(self) -> str:
+    def profile(self, verbose: bool = False) -> str:
         "Generate profiling information table for the node and its child nodes."
         profiles = []
         for node_tree_name, (_, node) in zip(self.format_tree(), self.iterate_tree()):
@@ -207,7 +207,8 @@ class Node:
                 "Node": node_tree_name,
                 **node._profile_single()
             })
-        return format_table(profiles, sep=" | ", fill='-', formatter=_PROFILE_FORMATTER, columns=_PROFILE_COLUMNS, align=_PROFILE_ALIGN)
+        columns = _PROFILE_COLUMNS if verbose else [c for c in _PROFILE_COLUMNS if c not in ('Indicator', 'Waiting In / Out', 'Waited In / Out')]
+        return format_table(profiles, sep=" | ", fill='-', formatter=_PROFILE_FORMATTER, columns=columns, align=_PROFILE_ALIGN)
 
     def format_tree(self) -> List[str]:
         if not hasattr(self, 'nodes'):
@@ -220,7 +221,7 @@ class Node:
                 indent = len(key) + 2
                 for j, line in enumerate(child_tree):
                     right = "└" if i == len(self.nodes) - 1 else "├"
-                    down = "│"
+                    down = " " if i == len(self.nodes) - 1 else "│"
                     if j == 0:
                         lines.append(f"{right}─{key} {line}")
                     else:
